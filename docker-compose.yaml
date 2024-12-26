@@ -43,6 +43,8 @@ services:
     # 將 node_red_data volume 掛載到容器的 /data 目錄以持久化數據
     volumes:
       - node_red_data:/data
+      - ./map.svg:/data/static/map.svg
+      - ./settings.js:/data/settings.js
     # 容器會自動重啟，除非手動停止
     restart: unless-stopped
     # 確保 MySQL 容器先啟動

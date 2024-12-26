@@ -1,0 +1,10 @@
+version: "2"
+authtoken: 你的_authtoken
+tunnels:
+  nodered:
+    addr: nodered:1880  # 使用容器名稱作為主機名
+    proto: http
+  grafana:
+    addr: grafana:3600  # 使用容器名稱作為主機名
+    proto: http
+

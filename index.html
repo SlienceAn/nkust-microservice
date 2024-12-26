@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdn.jsdelivr.net/npm/@unocss/runtime"></script>
+</head>
+<style>
+    html,
+    body {
+        box-sizing: border-box;
+        height: 99%;
+    }
+
+    body {
+        padding: 0;
+    }
+
+    #map {
+        transform: scale(1.4);
+        transform-origin: center center;
+    }
+</style>
+
+<body>
+    <div class="relative w-full h-full overflow-hidden bg-[#a1c5ea]">
+
+        <span id="city"
+            class="absolute inline-block px-4 py-2 text-lg font-semibold text-blue-900 bg-white rounded-lg shadow right-5 top-5">未選擇</span>
+        <object id="map" data="./map.svg" class="w-full h-full" />
+    </div>
+
+    <script>
+        const city = document.getElementById('city')
+        const map = document.getElementById('map')
+        console.log(map)
+
+        map.addEventListener('load', function () {
+            const svgDoc = map.contentDocument;
+            const cc = svgDoc.querySelector('svg')
+            console.log(cc)
+            const paths = svgDoc.querySelectorAll('path')
+
+            paths.forEach(path => {
+                path.addEventListener('click', () => {
+                    paths.forEach(p => p.classList.remove('active'))
+                    path.classList.add('active')
+                    city.textContent = path.id
+                    getWeatherData(path.id)
+                    const bbox = path.getBBox()
+                    console.log(bbox)
+                    const padding = 10
+                    const newViewBox = `${bbox.x - padding} ${bbox.y - padding} ${bbox.width + padding * 2} ${bbox.height + padding * 2}`
+                    cc.setAttribute('viewBox', newViewBox)
+                })
+            })
+        })
+
+        async function getWeatherData(city) {
+            const res = await fetch('https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization=CWA-81AD090A-70DB-4723-8E76-7F31BC65E63C&locationName=' + city)
+            const data = await res.json()
+            console.log(data.records)
+        }
+    </script>
+</body>
+
+</html>
