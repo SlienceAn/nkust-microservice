@@ -1,47 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <script src="https://cdn.jsdelivr.net/npm/@unocss/runtime"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        html,
+        body {
+            box-sizing: border-box;
+            height: 99%;
+            font-family: 微軟正黑體;
+            background: #a1c5ea;
+        }
+
+        body {
+            padding: 0;
+        }
+
+        #map {
+            transform: scale(1.4);
+            transform-origin: center center;
+        }
+    </style>
 </head>
-<style>
-    html,
-    body {
-        box-sizing: border-box;
-        height: 99%;
-    }
-
-    body {
-        padding: 0;
-    }
-
-    #map {
-        transform: scale(1.4);
-        transform-origin: center center;
-    }
-</style>
 
 <body>
-    <div class="relative w-full h-full overflow-hidden bg-[#a1c5ea]">
-
-        <span id="city"
-            class="absolute inline-block px-4 py-2 text-lg font-semibold text-blue-900 bg-white rounded-lg shadow right-5 top-5">未選擇</span>
-        <object id="map" data="./map.svg" class="w-full h-full" />
+    <div id="app" class="relative w-full h-full overflow-hidden">
+        <div id="card" class="w-1/2 p-2">
+            <div id="content"
+                class="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500 transition-all duration-300 hover:shadow-lg">
+                <div class="flex items-center justify-center mb-3">
+                    <h2 id="city" class="text-2xl font-bold"></h2>
+                </div>
+            </div>
+        </div>
+        <div class="w-1/2 h-full overflow-hidden">
+            <object id="map" data="./map.svg" class="w-full h-full" />
+        </div>
     </div>
 
     <script>
+        const app = document.getElementById('app')
+        app.className = 'hidden'
         const city = document.getElementById('city')
         const map = document.getElementById('map')
-        console.log(map)
-
+        const card = document.getElementById('card')
+        const content = document.getElementById('content')
+        // 初始 viewbox 位置
+        let currentViewBox = '435 15 180 400'
+        // svg 載入事件
         map.addEventListener('load', function () {
+            app.className = "flex flex-row-reverse"
             const svgDoc = map.contentDocument;
-            const cc = svgDoc.querySelector('svg')
-            console.log(cc)
+            const svg = svgDoc.querySelector('svg')
+            const animate = svg.querySelector('animate')
             const paths = svgDoc.querySelectorAll('path')
+            svg.setAttribute('viewBox', currentViewBox)
 
             paths.forEach(path => {
                 path.addEventListener('click', () => {
@@ -49,20 +65,91 @@
                     path.classList.add('active')
                     city.textContent = path.id
                     getWeatherData(path.id)
+
                     const bbox = path.getBBox()
-                    console.log(bbox)
-                    const padding = 10
+                    const padding = 70
                     const newViewBox = `${bbox.x - padding} ${bbox.y - padding} ${bbox.width + padding * 2} ${bbox.height + padding * 2}`
-                    cc.setAttribute('viewBox', newViewBox)
+                    animate.setAttribute('from', currentViewBox);
+                    animate.setAttribute('to', newViewBox);
+                    animate.setAttribute('calcMode', 'linear');
+                    animate.beginElement()
+                    currentViewBox = newViewBox
                 })
             })
         })
+        // 資訊卡添加表格
+        function addTable(tableData) {
+            // 創建表格HTML
+            const table = document.createElement('table');
+            table.className = 'w-full bg-white rounded-lg overflow-hidden shadow-lg';
 
+            // 創建表頭
+            const thead = document.createElement('thead');
+            thead.className = "bg-gray-100"
+            const headerRow = document.createElement('tr');
+            headerRow.innerHTML = `
+                    <th class="px-6 py-3 border-b-2 border-gray-200 text-left text-sm font-semibold text-gray-600">時間</th>
+                    <th class="px-6 py-3 border-b-2 border-gray-200 text-left text-sm font-semibold text-gray-600">天氣狀況</th>
+                    <th class="px-6 py-3 border-b-2 border-gray-200 text-left text-sm font-semibold text-gray-600">降雨機率</th>
+                    <th class="px-6 py-3 border-b-2 border-gray-200 text-left text-sm font-semibold text-gray-600">最低溫度</th>
+                    <th class="px-6 py-3 border-b-2 border-gray-200 text-left text-sm font-semibold text-gray-600">舒適度</th>
+                    <th class="px-6 py-3 border-b-2 border-gray-200 text-left text-sm font-semibold text-gray-600">最高溫度</th>
+            `;
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            // 創建表格內容
+            const tbody = document.createElement('tbody');
+
+            // 獲取時間段
+            const timeSlots = tableData[0].time.map(t => ({
+                startTime: new Date(t.startTime).toLocaleDateString('zh-TW', {
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: 'numeric'
+                }),
+                endTime: new Date(t.endTime).toLocaleDateString('zh-TW', {
+                    month: 'numeric',
+                    day: 'numeric',
+                    hour: 'numeric'
+                })
+            }));
+
+            // 為每個時間段創建一行
+            timeSlots.forEach((slot, index) => {
+                const row = document.createElement('tr');
+                row.className = "hover:bg-gray-50 transition-colors"
+                row.innerHTML = `
+                        <td class="px-6 py-4 border-b border-gray-200 text-sm">${slot.startTime} - ${slot.endTime}</td>
+                        <td class="px-6 py-4 border-b border-gray-200 text-sm">${tableData[0].time[index].parameter.parameterName}</td>
+                        <td class="px-6 py-4 border-b border-gray-200 text-sm">${tableData[1].time[index].parameter.parameterName}%</td>
+                        <td class="px-6 py-4 border-b border-gray-200 text-sm">${tableData[2].time[index].parameter.parameterName}°C</td>
+                        <td class="px-6 py-4 border-b border-gray-200 text-sm">${tableData[3].time[index].parameter.parameterName}</td>
+                        <td class="px-6 py-4 border-b border-gray-200 text-sm">${tableData[4].time[index].parameter.parameterName}°C</td>
+                        `;
+                tbody.appendChild(row);
+            });
+
+            table.appendChild(tbody);
+            const tableIsExist = content.querySelector('table')
+            // 如果已經存在表格，則替換
+            if (tableIsExist) {
+                content.replaceChild(table, tableIsExist)
+            } else {
+                // 將表格添加到卡片資訊中
+                content.appendChild(table);
+            }
+        }
+
+        // 抓取中央氣象局資料
         async function getWeatherData(city) {
             const res = await fetch('https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization=CWA-81AD090A-70DB-4723-8E76-7F31BC65E63C&locationName=' + city)
             const data = await res.json()
-            console.log(data.records)
+            const locationName = data.records.location[0].locationName
+            const weatherElement = data.records.location[0].weatherElement
+            addTable(weatherElement)
         }
+
     </script>
 </body>
 
